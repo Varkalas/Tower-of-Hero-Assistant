@@ -1,7 +1,8 @@
 import math
 
+import cv2
 import numpy
-from PIL import Image
+from PIL import Image, ImageTk
 import pytesseract
 import tkinter
 from tkinter import ttk
@@ -12,11 +13,47 @@ from images import *
 
 if __name__ == "__main__":
     # Initialize the GUI
-    '''root = tkinter.Tk()
-    tree = ttk.Treeview(root)
-    tree["columns"] = ("Item", "Name", "Tier", "Importance", "Order")'''
+    root = tkinter.Tk()
+    root.geometry("1000x800")
+    style = ttk.Style(root)
+    style.configure("Treeview", rowheight=60, background="darkgreen", borderwidth=2)
+    style.configure("Treeview.Heading", foreground="black")
+    frame = ttk.Frame(root, width=600, height=800)
+    frame.grid(column=0, row=0, sticky=(tkinter.N, tkinter.W, tkinter.E, tkinter.S))
+    tree = ttk.Treeview(frame)
+
+    # Table
+    tree["columns"] = ("Name", "Tier", "Importance", "Order")
+    tree.heading("#0", text="Item")
+    tree.column("#0", stretch=False)
+    tree.heading("Name", text="Name")
+    tree.column("Name", anchor=tkinter.W, stretch=False)
+    tree.heading("Tier", text="Tier")
+    tree.column("Tier", anchor=tkinter.CENTER, stretch=False)
+    tree.heading("Importance", text="Importance")
+    tree.column("Importance", anchor=tkinter.CENTER, stretch=False)
+    #tree.heading("Order", text="Order Acquired")
+    #tree.column("Order", anchor=tkinter.CENTER, stretch=False)
+    #tree["show"] = "headings"
 
     # Append the images to column 1 (alphabetical)
+    list_of_images = list()
+    index = 0
+    for item in GAME_ITEMS:
+        # Resize the image
+        image = item[1][5:56, 16:69]
+
+        # Convert from BGR to RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Convert cv2 image to PIL image
+        converted_image = Image.fromarray(image)
+
+        # Convert to ImageTk
+        list_of_images.append(ImageTk.PhotoImage(converted_image))
+
+        tree.insert("", "end", image=list_of_images[index], values=(item[0], item[2], item[3]))
+        index += 1
 
     # Append the item names to column 2
 
@@ -24,7 +61,12 @@ if __name__ == "__main__":
     my_file = open("C:\\tmp\\item_location.txt", "w")
     my_file.close()
 
-    # TODO: make this section part of GUI button (e.g. Gather Data)
+    # Run the GUI
+    frame.pack()
+    tree.pack()
+    root.mainloop()
+
+    # TODO: make this section part of GUI button (e.g. Import Data From Records Image)
     # Go through each item
     for item in GAME_ITEMS:
         # Match the template and if it's >= 80%, run with it
@@ -58,7 +100,3 @@ if __name__ == "__main__":
             item_level_number = item_level.translate({ord(char): None for char in " LV"})
             with open("C:\\tmp\\item_location.txt", "a") as my_file:
                 my_file.writelines("%s\t%s\t%d\n" % (item[0], item_level_number, item_acquisition_number))
-
-    # Run the GUI
-    '''tree.pack()
-    root.mainloop()'''
