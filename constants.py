@@ -1,5 +1,7 @@
 from images import *
 
+# Name, Image, Tier, Importance
+
 GAME_ITEMS = [("A King's Crown", IMG_A_KINGS_CROWN, 1, 1),
               ("Aegis", IMG_AEGIS, 4, 44),
               ("Awakening Armor", IMG_AWAKENING_ARMOR, 2, 35),
