@@ -55,3 +55,10 @@ GAME_ITEMS = [("A King's Crown", IMG_A_KINGS_CROWN, 1, 1),
               ("Tomahawk", IMG_TOMAHAWK, 5, 13),
               ("Training Book", IMG_TRAINING_BOOK, 4, 48),
               ("Wing Boots", IMG_WING_BOOTS, 3, 7)]
+
+CUMULATIVE_STATS = ["Coins",
+                    "Play Time",
+                    "Summoned Heroes",
+                    "Top Floor",
+                    "Acquired Items",
+                    "New Dungeon"]

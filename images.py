@@ -1,6 +1,6 @@
 from tkinter import messagebox
 
-from cv2 import cv2
+import cv2
 
 PAT_IMAGES = "img\\"
 
@@ -13,8 +13,6 @@ def image_reader(image_name):
     return read_image
 
 
-# TODO: Import this shit
-IMG_GAME_STATS = image_reader("game_stats.png")
 IMG_CUMULATIVE_STATS = image_reader("cumulative_statistics.png")
 
 IMG_A_KINGS_CROWN = image_reader("a_king's_crown.png")
