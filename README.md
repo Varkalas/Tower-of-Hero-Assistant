@@ -7,6 +7,7 @@ A tool to assist in data gathering for Tower of Hero.
 * Grabs the level of each item via optimal character recognition (Tesseract)
 * Writes the item name, level, and acquisition order to a file with tab spacing in between
 * A GUI that shows the item, name, tier, and importance
+* Cumulative statistics OCR
 
 # To-Do List
 * Improve the GUI
@@ -19,7 +20,7 @@ A tool to assist in data gathering for Tower of Hero.
 * Export to Excel/OpenOffice
 * Copy to clipboard?
 * Convert stupid abcABC number convention to real numbers
-* Acquire the Cumulative statistics by OCRing that word and then gathering the data underneath
+* Change the Cumulative statistics to be an intelligible format (standard math)
 * Make into a standalone executable using pip installer
 * Ability to remove Records columns
 * Implement with wxWidgets and give an option on which GUI to select upon loading
