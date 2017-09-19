@@ -3,7 +3,7 @@ import math
 from os import system
 from tempfile import gettempdir
 from time import time
-from tkinter import Toplevel, Frame, Tk, ttk, CENTER, TOP, W, filedialog, Menu, Label, Entry, Button
+from tkinter import Toplevel, Frame, Tk, ttk, CENTER, TOP, W, filedialog, Menu, Label, Entry, Button, StringVar
 
 import numpy
 from PIL import Image, ImageTk
@@ -30,9 +30,11 @@ class TowerOfHeroAssistant(Frame):
         self.input_frame = Frame(self)
         self.tree_view_frame = Frame(self)
         self.import_button = None
-        self.import_name = None
+        self.import_name = StringVar()
         self.imports = 0
         self.tree = ttk.Treeview(self.tree_view_frame)
+        self.progress_window = None
+        self.progress_bar = None
         self.tkinter_gui()
 
         # Execute Tkinter GUI
@@ -74,8 +76,9 @@ class TowerOfHeroAssistant(Frame):
         import_description.grid(column=0, row=0, sticky="w", columnspan=2, padx=4, pady=4)
         import_details = Label(self.input_frame, text="Enter player's name:")
         import_details.grid(column=0, row=1, sticky="e", padx=4, pady=4)
-        self.import_name = Entry(self.input_frame)
-        self.import_name.grid(column=1, row=1, sticky="nsew", padx=4, pady=4)
+        import_name_box = Entry(self.input_frame, textvariable=self.import_name)
+        import_name_box.grid(column=1, row=1, sticky="nsew", padx=4, pady=4)
+        self.import_name.set("")
         self.import_button = Button(self.input_frame, text="Import", command=self.insert_stats)
         self.import_button.grid(column=0, row=2, sticky="nsew", columnspan=2, padx=4, pady=4)
 
@@ -100,6 +103,26 @@ class TowerOfHeroAssistant(Frame):
         self.tree.column("Tier", anchor=CENTER, minwidth=0, width=36)
         self.tree.heading("Importance", text="Importance")
         self.tree.column("Importance", anchor=CENTER, minwidth=0, width=80)
+
+        # Move to center
+        self.parent.withdraw()  # Hide it immediately
+        self.parent.update_idletasks()  # Then hold on drawing the window
+        x = (self.parent.winfo_screenwidth() - self.parent.winfo_reqwidth()) / 2
+        y = (self.parent.winfo_screenheight() - self.parent.winfo_reqheight()) / 2
+        self.parent.geometry("+%d+%d" % (x, y))
+        self.parent.deiconify()  # Draw the window immediately
+
+        # Create a progress bar
+        self.progress_window = Toplevel()
+        sub_x = x + self.parent.winfo_reqwidth() / 4
+        sub_y = y + self.parent.winfo_reqheight() / 2
+        self.progress_window.geometry("+%d+%d" % (sub_x, sub_y))
+        # self.progress_window.wm_title("Progress")
+        self.progress_bar = ttk.Progressbar(self.progress_window, orient="horizontal", length=200, mode="determinate")
+        self.progress_bar["value"] = 0
+        self.progress_bar["maximum"] = 58
+        self.progress_window.withdraw()
+        self.progress_window.update_idletasks()
 
         # Go through each item for the row
         index = 0
@@ -127,6 +150,11 @@ class TowerOfHeroAssistant(Frame):
 
         # Add the titles (Item Name, Tier, Importance, Level, Item Acquisition Order)
         self.item_statistics.append(("Item Name", "Tier", "Importance", "Level", "Item Acquisition Order"))
+
+        # Start the progress bar
+        self.progress_bar.pack()
+        self.progress_window.update()
+        self.progress_window.deiconify()
 
         # Iterate through the items
         start_time = time()
@@ -173,11 +201,15 @@ class TowerOfHeroAssistant(Frame):
                 # Add to the item list (Item name, Tier, Importance, Level, Item Acquisition Order)
                 self.item_statistics.append((item[0], item[2], item[3], item_level_number, item_acquisition_order))
 
+                # Update the progress bar
+                self.progress_bar["value"] += 1
+                self.progress_bar.update()
+
                 # Print the time it took
                 seconds = time() - start_time
                 minutes, seconds = divmod(seconds, 60)
                 hours, minutes = divmod(minutes, 60)
-                print("Found %s after %d:%02d:%02d" % (item[0], hours, minutes, seconds))
+                print("Found %s (%s) after %d:%02d:%02d" % (item[0], item_level_number, hours, minutes, seconds))
             else:
                 messagebox.showerror("Image Recognition Failure",
                                      "Couldn't see {}. Try lowering the match % for images.".format(item[0]))
@@ -187,57 +219,59 @@ class TowerOfHeroAssistant(Frame):
         self.cumulative_statistics = list()
 
         # Add the titles (Cumulative Stat, Number)
-        self.item_statistics.append(("Cumulative Stat", "Number"))
+        self.cumulative_statistics.append(("Cumulative Stat", "Number"))
 
         # Match the template and if it's >= 80%, run with it
         result = cv2.matchTemplate(image, IMG_CUMULATIVE_STATS, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
         if max_val >= 0.8:
             # Get the region of the text
-            x = 230
-            y = max_loc[1]
+            y = max_loc[1]  # Pixel 718 for 1920x1080
 
+            _item_acquisition_order = 54
             for stat in CUMULATIVE_STATS:
                 # Grab the images of the text
                 if stat == "Coins":
-                    image = stat[y + 31:y + 66, x:x + 200]
+                    number_image = image[y + 31:y + 66, 270:490]
                 elif stat == "Play Time":
-                    image = stat[y + 66:y + 99, x:x + 200]
+                    number_image = image[y + 66:y + 99, 270:490]
                 elif stat == "Summoned Heroes":
-                    image = stat[y + 99:y + 130, x:x + 200]
+                    number_image = image[y + 99:y + 130, 348:490]
                 elif stat == "Top Floor":
-                    image = stat[y + 130:y + 165, x:x + 200]
+                    number_image = image[y + 130:y + 165, 370:490]
                 elif stat == "Acquired Items":
-                    image = stat[y + 165:y + 198, x:x + 200]
+                    number_image = image[y + 165:y + 198, 440:490]
                 elif stat == "New Dungeon":
-                    image = stat[y:y + 31, x:x + 200]
+                    number_image = image[y + 198:y + 231, 380:490]
+                else:
+                    number_image = None
 
                 # Optimize the image for Tesseract OCR to accurately get the data
-                optimized_image = cv2.inRange(image, numpy.array([200, 200, 200]), numpy.array([255, 255, 255]))
+                optimized_image = cv2.inRange(number_image, numpy.array([200, 200, 200]), numpy.array([255, 255, 255]))
                 if _debug:
                     cv2.imshow("test", optimized_image)
                     cv2.waitKey(0)
 
                 # Optical character recognition
-                image = Image.fromarray(optimized_image)
+                ocr_image = Image.fromarray(optimized_image)
                 text = ""
                 if stat == "Coins":
-                    text = pytesseract.image_to_string(image,
+                    text = pytesseract.image_to_string(ocr_image,
                                                        config="-c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyzKM -psm 6")
                 elif stat == "Play Time":
-                    text = pytesseract.image_to_string(image,
+                    text = pytesseract.image_to_string(ocr_image,
                                                        config="-c tessedit_char_whitelist=0123456789: -psm 6")
                 elif stat == "Summoned Heroes":
-                    text = pytesseract.image_to_string(image,
+                    text = pytesseract.image_to_string(ocr_image,
                                                        config="-c tessedit_char_whitelist=0123456789KM -psm 6")
                 elif stat == "Top Floor":
-                    text = pytesseract.image_to_string(image,
+                    text = pytesseract.image_to_string(ocr_image,
                                                        config="-c tessedit_char_whitelist=0123456789 -psm 6")
                 elif stat == "Acquired Items":
-                    text = pytesseract.image_to_string(image,
+                    text = pytesseract.image_to_string(ocr_image,
                                                        config="-c tessedit_char_whitelist=0123456789 -psm 6")
                 elif stat == "New Dungeon":
-                    text = pytesseract.image_to_string(image,
+                    text = pytesseract.image_to_string(ocr_image,
                                                        config="-c tessedit_char_whitelist=0123456789 -psm 6")
                 if text is "":
                     messagebox.showerror("Optical Character Recognition Failure",
@@ -248,11 +282,28 @@ class TowerOfHeroAssistant(Frame):
                 # Remove spaces
                 final_text = text.translate({ord(char): None for char in " "})
 
-                # Add to the cumulative stats list (Cumulative Stat, Number)
-                self.cumulative_statistics.append((stat, final_text))
+                # Add to the cumulative stats list (Cumulative Stat, Tier, Importance, Number, Item Acquisition Order)
+                self.cumulative_statistics.append((stat, "N/A", "N/A", final_text, _item_acquisition_order))
+                _item_acquisition_order += 1
+
+                # Update the progress bar
+                self.progress_bar["value"] += 1
+                self.progress_bar.update()
+
+                # Print the time it took
+                seconds = time() - start_time
+                minutes, seconds = divmod(seconds, 60)
+                hours, minutes = divmod(minutes, 60)
+                print("Found %s after %d:%02d:%02d" % (final_text, hours, minutes, seconds))
         else:
             messagebox.showerror("Image Recognition Failure",
                                  "Couldn't see Cumulative. Try lowering the match % for images.")
+
+        self.progress_bar.stop()
+        self.progress_bar.pack_forget()
+        self.progress_window.withdraw()
+
+        self.open_stats_in_default_text_editor()
 
         return True
 
@@ -264,31 +315,31 @@ class TowerOfHeroAssistant(Frame):
         my_file.close()
 
         # Add the titles (Item Name, Level, Item Acquisition Order)
-        with open(my_file_name, "a") as my_file:
-            my_file.writelines("Item Name\tLevel\tItem Acquisition Order")
+        # TODO
+        '''with open(my_file_name, "a") as my_file:
+            my_file.writelines("Item Name\tLevel\tItem Acquisition Order")'''
 
         # Write only the Item Name, Item Level, and Item Aquisition Order
         for game_stat in self.item_statistics:
             with open(my_file_name, "a") as my_file:
-                my_file.writelines("%s\t%s\t%d\n" % (game_stat[0], game_stat[3], game_stat[4]))
+                my_file.writelines("%s\t%s\t%s\n" % (game_stat[0], game_stat[3], game_stat[4]))
 
-        # Add a space and then the titles (Cumulative Stat, Number)
-        with open("C:\\tmp\\item_location.txt", "a") as my_file:
+        with open(my_file_name, "a") as my_file:
             my_file.writelines("\n")
-            my_file.writelines("%s\t%s\n" % ("Cumulative Stat", "Number"))
 
         # Write cumulative stats
         for cumulative_stat in self.cumulative_statistics:
-            with open("C:\\tmp\\item_location.txt", "a") as my_file:
-                my_file.writelines("%s\t%s\n" % (cumulative_stat[0], cumulative_stat[1]))
+            with open(my_file_name, "a") as my_file:
+                my_file.writelines("%s\t%s\t%s\n" % (cumulative_stat[0], cumulative_stat[3], cumulative_stat[4]))
 
         # Open the temporary file in the native text editor
         system(my_file_name)
 
     def insert_stats(self):
         # Error check if the user didn't use a name
-        if not self.import_name or self.import_name == "":
+        if self.import_name.get() is None or self.import_name.get() == "":
             messagebox.showerror("Import Name Missing", "Please enter a name for the data being imported.")
+            return None
 
         # Open a file
         filename = filedialog.askopenfilename(initialdir="/", title="Choose a Tower of Hero Records image file.",
@@ -298,15 +349,6 @@ class TowerOfHeroAssistant(Frame):
 
         image = cv2.imread(filename)
         self.get_item_order_and_stats(image)
-
-        # Create a progress bar
-        # TODO: have it have a label and a not be in a stupid position
-        progress_window = Toplevel()
-        progress_window.wm_title("Progress")
-        progress_bar = ttk.Progressbar(progress_window, orient="horizontal", length=200, mode="determinate")
-        progress_bar["value"] = 0
-        progress_bar["maximum"] = 52
-        progress_bar.pack()
 
         # Recreate the table (treeview)
         self.tree["columns"] = ("Name", "Tier", "Importance", "Order", self.import_name)
@@ -322,19 +364,14 @@ class TowerOfHeroAssistant(Frame):
         self.tree.column(self.import_name, anchor=CENTER, minwidth=0, width=80)
         self.tree.grid(row=0, column=2, rowspan=4, sticky="nsew")
 
-        index = 0
-        for stat in self.item_statistics:
+        # TODO
+        '''for stat in self.item_statistics:
             # Insert the row (Item name, Tier, Importance, Level, Acquisition number)
             # NOTE: You cannot insert columns in Tkinter
-            self.tree.insert("", "end", values=(stat[0], stat[1], stat[2], stat[3], stat[4]))
-
-            index += 1
-            progress_bar["value"] += 1
-            progress_bar.update()
+            self.tree.insert("", "end", values=(stat[0], stat[1], stat[2], stat[3], stat[4]))'''
 
         self.imports += 1
-        progress_bar.stop()
-        progress_bar.destroy()  # TODO: Not working
+
         print("Successfully imported the Records.")
 
     def delete_column(self):

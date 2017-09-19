@@ -2,6 +2,7 @@
 A tool to assist in data gathering for Tower of Hero.
 
 # Implemented Features
+* New and improved progress bar
 * Finds where each item is in Records (OpenCV)
     - Currently only tested for 1080x1920, haven't tested lower resolutions
 * Grabs the level of each item via optimal character recognition (Tesseract)
@@ -10,8 +11,6 @@ A tool to assist in data gathering for Tower of Hero.
 * Cumulative statistics OCR
 
 # To-Do List
-* Improve the GUI
-    - Make it look less stupid
 * Ability to add Records columns
     - Browse files, prompt enter name edit box, and match % (default is 80% for 1080x1920)
     - Use color coding to indicate best stats
@@ -19,7 +18,6 @@ A tool to assist in data gathering for Tower of Hero.
 * Save functionality
 * Export to Excel/OpenOffice
 * Copy to clipboard?
-* Convert stupid abcABC number convention to real numbers
 * Change the Cumulative statistics to be an intelligible format (standard math)
 * Make into a standalone executable using pip installer
 * Ability to remove Records columns
