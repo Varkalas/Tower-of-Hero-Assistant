@@ -9,6 +9,7 @@ A tool to assist in data gathering for Tower of Hero.
 * Writes the item name, level, and acquisition order to a file with tab spacing in between
 * A GUI that shows the item, name, tier, and importance
 * Cumulative statistics OCR
+* Coins and Summoned Heroes are displayed in scientific notation
 
 # To-Do List
 * Ability to add Records columns

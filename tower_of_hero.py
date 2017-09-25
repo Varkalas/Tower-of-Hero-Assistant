@@ -1,15 +1,19 @@
 # Imports
-import math
+from decimal import Decimal
 from os import system
+from math import floor
+from re import findall
 from tempfile import gettempdir
 from time import time
-from tkinter import Toplevel, Frame, Tk, ttk, CENTER, TOP, W, filedialog, Menu, Label, Entry, Button, StringVar
+from tkinter import Toplevel, Frame, Tk, ttk, CENTER, TOP, W, filedialog, Menu, Label, Entry, Button, StringVar, messagebox
 
+import cv2
 import numpy
 from PIL import Image, ImageTk
 import pytesseract
 
-from constants import *
+from constants import GAME_ITEMS, CUMULATIVE_STATS, MATH_NOTATION
+from images import IMG_CUMULATIVE_STATS
 
 
 # Consants
@@ -21,6 +25,7 @@ class TowerOfHeroAssistant(Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
+        self.list_of_imports = list()
         self.item_statistics = list()
         self.cumulative_statistics = list()
         self.list_of_images = list()
@@ -31,7 +36,6 @@ class TowerOfHeroAssistant(Frame):
         self.tree_view_frame = Frame(self)
         self.import_button = None
         self.import_name = StringVar()
-        self.imports = 0
         self.tree = ttk.Treeview(self.tree_view_frame)
         self.progress_window = None
         self.progress_bar = None
@@ -90,7 +94,7 @@ class TowerOfHeroAssistant(Frame):
         scrollbar = ttk.Scrollbar(self.tree_view_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.grid(row=0, column=2, rowspan=4, sticky="nsew")
-        scrollbar.grid(row=0, column=5+self.imports, rowspan=4, sticky="nse", pady=4)
+        scrollbar.grid(row=0, column=5+len(self.list_of_imports), rowspan=4, sticky="nse", pady=4)
         scrollbar.configure(command=self.tree.yview)
 
         # Set up the initial columns
@@ -120,10 +124,13 @@ class TowerOfHeroAssistant(Frame):
         # self.progress_window.wm_title("Progress")
         self.progress_bar = ttk.Progressbar(self.progress_window, orient="horizontal", length=200, mode="determinate")
         self.progress_bar["value"] = 0
-        self.progress_bar["maximum"] = 58
+        self.progress_bar["maximum"] = 60  # 61 total: 54 items, 6 stats, 1 total line
         self.progress_window.withdraw()
         self.progress_window.update_idletasks()
 
+        self.make_the_treeview()
+
+    def make_the_treeview(self):
         # Go through each item for the row
         index = 0
         for item in GAME_ITEMS:
@@ -142,6 +149,12 @@ class TowerOfHeroAssistant(Frame):
 
             # Append the name, tier, and importance
             self.tree.insert("", "end", image=self.list_of_images[index], values=(item[0], item[2], item[3]))
+            # TODO: Make the tree initially just Name, Tier, Importance. Order and Levels will be added dynamically
+            # self.tree["columns"] = ("Name", "Tier", "Importance", [Name] Order, [self.import_name.get()] Level)
+            # self.tree.heading(self.import_name, text=self.import_name)
+            # self.tree.column(self.import_name, anchor=CENTER, minwidth=0, width=80)
+            # self.tree.grid(row=0, column=2, rowspan=4, sticky="nsew")
+
             index += 1
 
     def get_item_order_and_stats(self, image):
@@ -157,6 +170,8 @@ class TowerOfHeroAssistant(Frame):
         self.progress_window.deiconify()
 
         # Iterate through the items
+        item_acquisition_order = 0
+        total_levels = 0
         start_time = time()
         for item in GAME_ITEMS:
             # Match the template and if it's >= 80%, run with it
@@ -170,8 +185,8 @@ class TowerOfHeroAssistant(Frame):
                 height = 24
 
                 # Find the location of the item to get the item acquisition order
-                row_number = math.floor((max_loc[0] - 34) / 92) + 1
-                column_number = math.floor((max_loc[1] - 1150) / 80)
+                row_number = floor((max_loc[0] - 34) / 92) + 1
+                column_number = floor((max_loc[1] - 1150) / 80)
                 item_acquisition_order = row_number + (11 * column_number)
                 if item_acquisition_order >= 12:
                     item_acquisition_order -= 1
@@ -198,6 +213,9 @@ class TowerOfHeroAssistant(Frame):
                 item_level_number_almost = item_level.translate({ord(char): None for char in " LV"})
                 item_level_number = item_level_number_almost.translate({ord(char): "0" for char in "O"})
 
+                # Add to the total levels
+                total_levels += int(item_level_number)
+
                 # Add to the item list (Item name, Tier, Importance, Level, Item Acquisition Order)
                 self.item_statistics.append((item[0], item[2], item[3], item_level_number, item_acquisition_order))
 
@@ -215,11 +233,17 @@ class TowerOfHeroAssistant(Frame):
                                      "Couldn't see {}. Try lowering the match % for images.".format(item[0]))
                 return None
 
+        # Add the total
+        item_acquisition_order += 1
+        self.item_statistics.append(("Total", "N/A", "N/A", str(total_levels), item_acquisition_order))
+        self.progress_bar["value"] += 1
+        self.progress_bar.update()
+
         # Reset the cumulative statistics list
         self.cumulative_statistics = list()
 
         # Add the titles (Cumulative Stat, Number)
-        self.cumulative_statistics.append(("Cumulative Stat", "Number"))
+        self.cumulative_statistics.append(("Cumulative Stat", "-", "-", "Number", "Order"))
 
         # Match the template and if it's >= 80%, run with it
         result = cv2.matchTemplate(image, IMG_CUMULATIVE_STATS, cv2.TM_CCOEFF_NORMED)
@@ -228,7 +252,6 @@ class TowerOfHeroAssistant(Frame):
             # Get the region of the text
             y = max_loc[1]  # Pixel 718 for 1920x1080
 
-            _item_acquisition_order = 54
             for stat in CUMULATIVE_STATS:
                 # Grab the images of the text
                 if stat == "Coins":
@@ -277,14 +300,77 @@ class TowerOfHeroAssistant(Frame):
                     messagebox.showerror("Optical Character Recognition Failure",
                                          "Couldn't read the number for the {}. Try lowering the "
                                          "match % for images or changing the config file.".format(stat))
-                # TODO: Convert weird formats to scientific or exponential formats
 
                 # Remove spaces
                 final_text = text.translate({ord(char): None for char in " "})
+                print(final_text)
+
+                # Convert the character format to scientific
+                if stat == "Coins" or stat == "Summoned Heroes":
+                    '''
+                    So each letter increment adds 10^3.
+                    K = 1 (10^3)
+                    M = 2 (10^6)
+                    B = 3 (10^9)
+                    T = 4 (10^12)
+                    a = 5 (10^15)
+                    ...
+                    z = 30 (10^90)
+                    aa = 31 (10^93)
+                    ab = 32 (10^96)
+                    ...
+                    az = 56 (10^168)
+                    ba = 57 (10^171)
+
+                    So 100ab200aa would be 100 * 1096 + 200 * 1093 or 100.2 * 1096 (1.002E98 in scientific notation)
+                    '''
+
+                    # Check if the format is less than or greater than 1 million
+                    incremental_format_first_letters = findall(r"\d+([a-zA-Z]+)\d+[a-zA-Z]", final_text)
+                    if incremental_format_first_letters:
+                        incremental_format_first_letters = findall(r"\d+([a-zA-Z]+)\d+[a-zA-Z]+", final_text)[0]  # > million
+                        incremental_format_second_letters = findall(r"\d+[a-zA-Z]+\d+([a-zA-Z]+)", final_text)[0]
+                    else:
+                        incremental_format_first_letters = findall(r"\d+([a-zA-Z]+)\d+", final_text)[0]
+                        incremental_format_second_letters = ""
+
+                    # Format: __K__ (under one million)
+                    if incremental_format_first_letters == "K":
+                        print(stat + ": Found it was under 1 million (e.g. 3K431)")
+                        alphabetic_notation = int(findall(r"(\d+)[a-zA-Z]+\d+", final_text)[0]) * 1000 + int(findall(r"\d+[a-zA-Z]+(\d+)", final_text)[0])
+                        final_text = "%.3E" % Decimal(str(alphabetic_notation))
+                    # Format: __a__b (only one letter)
+                    elif incremental_format_first_letters in MATH_NOTATION and incremental_format_second_letters in MATH_NOTATION:
+                        print(stat + ": Found single letter format (e.g. 100M50K or 50t310s)")
+                        # formula = 10^(3*(x+1))
+                        first_letter_multiplier = 10 ^ (3 * (MATH_NOTATION.index(incremental_format_first_letters) + 1))
+                        second_letter_multiplier = 10 ^ (3 * (MATH_NOTATION.index(incremental_format_second_letters) + 1))
+                        alphabetic_notation = int(
+                            findall(r"(\d+)[a-zA-Z]+\d+[a-zA-Z]+", final_text)[0]) * first_letter_multiplier + int(
+                            findall(r"\d+[a-zA-Z]+(\d+)[a-zA-Z]+", final_text)[0]) * second_letter_multiplier
+                        final_text = "%.3E" % Decimal(str(alphabetic_notation))
+                    # Format: __ab__aa (two letters)
+                    elif len(incremental_format_first_letters) > 1 and len(incremental_format_second_letters) > 1:
+                        print(stat + ": Found double letter format (e.g. 5ab230aa)")
+                        # formula = 10^(3 * (26*(x-3) + 5) + (3*(y-4)))
+                        first_letter_multiplier = 10 ^ (3 * ((26 * (MATH_NOTATION.index(incremental_format_first_letters[0]) - 3)) + 5)
+                                                        + (3 * (MATH_NOTATION.index(incremental_format_first_letters[1]) - 4)))
+
+                        second_letter_multiplier = 10 ^ (3 * ((26 * (MATH_NOTATION.index(incremental_format_second_letters[0]) - 3)) + 5)
+                                                         + (3 * (MATH_NOTATION.index(incremental_format_second_letters[1]) - 4)))
+                        alphabetic_notation = int(
+                            findall(r"(\d+)[a-zA-Z]+\d+[a-zA-Z]+", final_text)[0]) * first_letter_multiplier + int(
+                            findall(r"\d+[a-zA-Z]+(\d+)[a-zA-Z]+", final_text)[0]) * second_letter_multiplier
+                        print(str(alphabetic_notation))
+                        final_text = "%.3E" % Decimal(str(alphabetic_notation))
+                    # Error
+                    else:
+                        messagebox.showerror("Calculation Failure",
+                                             "Unable to calculate the scientific notation of " + stat + ". Using the alphabetic notation instead.")
 
                 # Add to the cumulative stats list (Cumulative Stat, Tier, Importance, Number, Item Acquisition Order)
-                self.cumulative_statistics.append((stat, "N/A", "N/A", final_text, _item_acquisition_order))
-                _item_acquisition_order += 1
+                item_acquisition_order += 1
+                self.cumulative_statistics.append((stat, "N/A", "N/A", final_text, item_acquisition_order))
 
                 # Update the progress bar
                 self.progress_bar["value"] += 1
@@ -299,6 +385,7 @@ class TowerOfHeroAssistant(Frame):
             messagebox.showerror("Image Recognition Failure",
                                  "Couldn't see Cumulative. Try lowering the match % for images.")
 
+        self.list_of_imports.append((self.item_statistics, self.cumulative_statistics))
         self.progress_bar.stop()
         self.progress_bar.pack_forget()
         self.progress_window.withdraw()
@@ -313,11 +400,6 @@ class TowerOfHeroAssistant(Frame):
         my_file_name = gettempdir() + "\\tower_of_hero_statistics.txt"
         my_file = open(my_file_name, "w")
         my_file.close()
-
-        # Add the titles (Item Name, Level, Item Acquisition Order)
-        # TODO
-        '''with open(my_file_name, "a") as my_file:
-            my_file.writelines("Item Name\tLevel\tItem Acquisition Order")'''
 
         # Write only the Item Name, Item Level, and Item Aquisition Order
         for game_stat in self.item_statistics:
@@ -343,7 +425,7 @@ class TowerOfHeroAssistant(Frame):
 
         # Open a file
         filename = filedialog.askopenfilename(initialdir="/", title="Choose a Tower of Hero Records image file.",
-                                              filetypes=(("PNG Files", "*.png"), ("All Files", "*.*")))
+                                              filetypes=("PNG Files", "*.png"))
         if not filename:  # If the user cancels
             return None
 
@@ -351,29 +433,11 @@ class TowerOfHeroAssistant(Frame):
         self.get_item_order_and_stats(image)
 
         # Recreate the table (treeview)
-        self.tree["columns"] = ("Name", "Tier", "Importance", "Order", self.import_name)
-        self.tree.heading("#0", text="Item")
-        self.tree.column("#0", anchor=CENTER, minwidth=0, width=60)
-        self.tree.heading("Name", text="Name")
-        self.tree.column("Name", anchor=W, minwidth=0, width=150)
-        self.tree.heading("Tier", text="Tier")
-        self.tree.column("Tier", anchor=CENTER, minwidth=0, width=36)
-        self.tree.heading("Importance", text="Importance")
-        self.tree.column("Importance", anchor=CENTER, minwidth=0, width=80)
-        self.tree.heading(self.import_name, text=self.import_name)
-        self.tree.column(self.import_name, anchor=CENTER, minwidth=0, width=80)
-        self.tree.grid(row=0, column=2, rowspan=4, sticky="nsew")
-
-        # TODO
-        '''for stat in self.item_statistics:
-            # Insert the row (Item name, Tier, Importance, Level, Acquisition number)
-            # NOTE: You cannot insert columns in Tkinter
-            self.tree.insert("", "end", values=(stat[0], stat[1], stat[2], stat[3], stat[4]))'''
-
-        self.imports += 1
+        self.make_the_treeview()
 
         print("Successfully imported the Records.")
 
+    # TODO
     def delete_column(self):
         selected_column = self.tree.selection()[0]
         self.tree.delete(selected_column)
