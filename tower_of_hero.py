@@ -343,8 +343,8 @@ class TowerOfHeroAssistant(Frame):
                     elif incremental_format_first_letters in MATH_NOTATION and incremental_format_second_letters in MATH_NOTATION:
                         print(stat + ": Found single letter format (e.g. 100M50K or 50t310s)")
                         # formula = 10^(3*(x+1))
-                        first_letter_multiplier = 10 ^ (3 * (MATH_NOTATION.index(incremental_format_first_letters) + 1))
-                        second_letter_multiplier = 10 ^ (3 * (MATH_NOTATION.index(incremental_format_second_letters) + 1))
+                        first_letter_multiplier = 10 ** (3 * (MATH_NOTATION.index(incremental_format_first_letters) + 1))
+                        second_letter_multiplier = 10 ** (3 * (MATH_NOTATION.index(incremental_format_second_letters) + 1))
                         alphabetic_notation = int(
                             findall(r"(\d+)[a-zA-Z]+\d+[a-zA-Z]+", final_text)[0]) * first_letter_multiplier + int(
                             findall(r"\d+[a-zA-Z]+(\d+)[a-zA-Z]+", final_text)[0]) * second_letter_multiplier
@@ -353,15 +353,14 @@ class TowerOfHeroAssistant(Frame):
                     elif len(incremental_format_first_letters) > 1 and len(incremental_format_second_letters) > 1:
                         print(stat + ": Found double letter format (e.g. 5ab230aa)")
                         # formula = 10^(3 * (26*(x-3) + 5) + (3*(y-4)))
-                        first_letter_multiplier = 10 ^ (3 * ((26 * (MATH_NOTATION.index(incremental_format_first_letters[0]) - 3)) + 5)
-                                                        + (3 * (MATH_NOTATION.index(incremental_format_first_letters[1]) - 4)))
+                        first_letter_multiplier = 10 ** (3 * ((26 * (MATH_NOTATION.index(incremental_format_first_letters[0]) - 3)) + 5)
+                                                         + (3 * (MATH_NOTATION.index(incremental_format_first_letters[1]) - 4)))
 
-                        second_letter_multiplier = 10 ^ (3 * ((26 * (MATH_NOTATION.index(incremental_format_second_letters[0]) - 3)) + 5)
-                                                         + (3 * (MATH_NOTATION.index(incremental_format_second_letters[1]) - 4)))
+                        second_letter_multiplier = 10 ** (3 * ((26 * (MATH_NOTATION.index(incremental_format_second_letters[0]) - 3)) + 5)
+                                                          + (3 * (MATH_NOTATION.index(incremental_format_second_letters[1]) - 4)))
                         alphabetic_notation = int(
                             findall(r"(\d+)[a-zA-Z]+\d+[a-zA-Z]+", final_text)[0]) * first_letter_multiplier + int(
                             findall(r"\d+[a-zA-Z]+(\d+)[a-zA-Z]+", final_text)[0]) * second_letter_multiplier
-                        print(str(alphabetic_notation))
                         final_text = "%.3E" % Decimal(str(alphabetic_notation))
                     # Error
                     else:
@@ -425,7 +424,7 @@ class TowerOfHeroAssistant(Frame):
 
         # Open a file
         filename = filedialog.askopenfilename(initialdir="/", title="Choose a Tower of Hero Records image file.",
-                                              filetypes=("PNG Files", "*.png"))
+                                              filetypes=[("JPG Files", "*.jpg")])
         if not filename:  # If the user cancels
             return None
 
