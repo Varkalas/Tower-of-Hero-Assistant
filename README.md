@@ -19,7 +19,6 @@ A tool to assist in data gathering for Tower of Hero.
 * Save functionality
 * Export to Excel/OpenOffice
 * Copy to clipboard?
-* Change the Cumulative statistics to be an intelligible format (standard math)
 * Make into a standalone executable using pip installer
 * Ability to remove Records columns
 * Implement with wxWidgets and give an option on which GUI to select upon loading

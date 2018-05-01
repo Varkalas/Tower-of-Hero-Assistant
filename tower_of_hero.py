@@ -18,6 +18,9 @@ from images import IMG_CUMULATIVE_STATS
 
 # Consants
 _debug = False
+IMPORT_NAME = 0
+IMPORT_ITEM_STATISTICS = 0
+IMPORT_CUMULATIVE_STATISTICS = 0
 
 
 # Tower of Hero Assistant
@@ -25,7 +28,7 @@ class TowerOfHeroAssistant(Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.list_of_imports = list()
+        self.list_of_imports = list()        # Name1, TupleOfStats1, Name2, TupleOfStats2, etc.
         self.item_statistics = list()
         self.cumulative_statistics = list()
         self.list_of_images = list()
@@ -74,6 +77,8 @@ class TowerOfHeroAssistant(Frame):
         file_menu.add_command(label="Import Records from PNG", command=self.get_item_order_and_stats)
         file_menu.add_command(label="Exit", command=self.parent.quit)
         menu_bar.add_cascade(label="File", menu=file_menu)
+        # TODO: Add saving
+        # TODO: Memory leak
 
         # Records Import Elements
         import_description = Label(self.input_frame, text="Import Records via PNG Screenshot")
@@ -82,6 +87,9 @@ class TowerOfHeroAssistant(Frame):
         import_details.grid(column=0, row=1, sticky="e", padx=4, pady=4)
         import_name_box = Entry(self.input_frame, textvariable=self.import_name)
         import_name_box.grid(column=1, row=1, sticky="nsew", padx=4, pady=4)
+        # TODO: Checkbox for showing the image to confirm the results
+        # TODO: Checkbox for opening Notepad document
+        # TODO: Checkbox for displaying found results
         self.import_name.set("")
         self.import_button = Button(self.input_frame, text="Import", command=self.insert_stats)
         self.import_button.grid(column=0, row=2, sticky="nsew", columnspan=2, padx=4, pady=4)
@@ -131,7 +139,21 @@ class TowerOfHeroAssistant(Frame):
         self.make_the_treeview()
 
     def make_the_treeview(self):
-        # Go through each item for the row
+        # Reset the treeview
+        self.tree.delete(*self.tree.get_children())
+
+        # Put the header -- Name, Tier, Importance, Username1 (Item Level), Username1 (Order Acquired), etc.
+        header = list()
+        header.append("Name")
+        header.append("Tier (corfe83)")
+        header.append("Rank (Varkalas)")
+        for users in self.list_of_imports:
+            header.append(users[0])
+        self.tree["columns"] = header
+        # TODO: Do I need this? self.tree.heading("Importance", text="Importance")
+        # TODO: Do I need this? self.tree.column("Importance", anchor=CENTER, minwidth=0, width=80)
+
+        # Make the rows for the items
         index = 0
         for item in GAME_ITEMS:
             # Resize the image
@@ -147,19 +169,38 @@ class TowerOfHeroAssistant(Frame):
             # Convert to ImageTk
             self.list_of_images.append(ImageTk.PhotoImage(converted_image))
 
-            # Append the name, tier, and importance
-            self.tree.insert("", "end", image=self.list_of_images[index], values=(item[0], item[2], item[3]))
-            # TODO: Make the tree initially just Name, Tier, Importance. Order and Levels will be added dynamically
-            # self.tree["columns"] = ("Name", "Tier", "Importance", [Name] Order, [self.import_name.get()] Level)
-            # self.tree.heading(self.import_name, text=self.import_name)
-            # self.tree.column(self.import_name, anchor=CENTER, minwidth=0, width=80)
-            # self.tree.grid(row=0, column=2, rowspan=4, sticky="nsew")
+            # Append the name, tier, importance, and each import's item data
+            value_list = list()
+            value_list.append(item[0])
+            value_list.append(item[2])
+            value_list.append(item[3])
+            for users in self.list_of_imports:               # (String, List, List) = (Username, list of tuples of item stats, list of tuples of cumulative stats)
+                for items in users[IMPORT_ITEM_STATISTICS]:  # (Item name, Tier, Importance, Level, Item Acquisition Order)
+                    if item[0] == items[0]:
+                        value_list.append(items[3])  # User's item level
+                        # TODO: Include item acquisition order only if it's the primary character
+                        value_list.append(items[4])  # User's item acquisition order
 
+            self.tree.insert("", "end", image=self.list_of_images[index], values=value_list)
+            if self.import_name.get() != "":
+                self.tree.column(self.import_name.get(), anchor=CENTER, minwidth=0, width=80)
+            self.tree.grid(row=0, column=2, rowspan=4, sticky="nsew")  # TODO: Adjust rowspan?
+
+            # Append the user data
+            for user_stats in self.list_of_imports:
+                self.tree.insert("", "end", )
+
+            # Make the rows for the cumulative statistics
             index += 1
 
     def get_item_order_and_stats(self, image):
-        # Reset the item list
+        # Check if a name is inputted
+        if self.import_name.get() == "":
+            messagebox.showerror("Import Name Missing", "Please enter a name for the data being imported.")
+
+        # Reset the lists
         self.item_statistics = list()
+        self.cumulative_statistics = list()
 
         # Add the titles (Item Name, Tier, Importance, Level, Item Acquisition Order)
         self.item_statistics.append(("Item Name", "Tier", "Importance", "Level", "Item Acquisition Order"))
@@ -170,14 +211,13 @@ class TowerOfHeroAssistant(Frame):
         self.progress_window.deiconify()
 
         # Iterate through the items
-        item_acquisition_order = 0
         total_levels = 0
         start_time = time()
         for item in GAME_ITEMS:
             # Match the template and if it's >= 80%, run with it
             result = cv2.matchTemplate(image, item[1], cv2.TM_CCOEFF_NORMED)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-            if max_val >= 0.8:
+            if max_val >= 0.7:
                 # Get the region of the text
                 x = max_loc[0] - 2
                 y = max_loc[1] + 51
@@ -229,12 +269,11 @@ class TowerOfHeroAssistant(Frame):
                 hours, minutes = divmod(minutes, 60)
                 print("Found %s (%s) after %d:%02d:%02d" % (item[0], item_level_number, hours, minutes, seconds))
             else:
-                messagebox.showerror("Image Recognition Failure",
-                                     "Couldn't see {}. Try lowering the match % for images.".format(item[0]))
-                return None
+                print("ERROR: Couldn't see %s. Either the item doesn't exist or the image is of too poor quality." % item[0])
+                self.item_statistics.append((item[0], item[2], item[3], "?", "?"))
 
         # Add the total
-        item_acquisition_order += 1
+        item_acquisition_order = len(self.item_statistics) + 1
         self.item_statistics.append(("Total", "N/A", "N/A", str(total_levels), item_acquisition_order))
         self.progress_bar["value"] += 1
         self.progress_bar.update()
@@ -270,8 +309,9 @@ class TowerOfHeroAssistant(Frame):
                     number_image = None
 
                 # Optimize the image for Tesseract OCR to accurately get the data
-                optimized_image = cv2.inRange(number_image, numpy.array([200, 200, 200]), numpy.array([255, 255, 255]))
-                if _debug:
+                optimized_image_binary = cv2.inRange(number_image, numpy.array([200, 200, 200]), numpy.array([255, 255, 255]))
+                optimized_image = cv2.resize(optimized_image_binary, (0, 0), fx=2.0, fy=2.0)
+                if True:
                     cv2.imshow("test", optimized_image)
                     cv2.waitKey(0)
 
@@ -283,7 +323,8 @@ class TowerOfHeroAssistant(Frame):
                                                        config="-c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyzKM -psm 6")
                 elif stat == "Play Time":
                     text = pytesseract.image_to_string(ocr_image,
-                                                       config="-c tessedit_char_whitelist=0123456789: -psm 6")
+                                                       config="-c tessedit_char_whitelist=0123456789: -psm 7")
+                    # TODO: If after one colon, we over 3 digits, add a colon before the third/etc. digit
                 elif stat == "Summoned Heroes":
                     text = pytesseract.image_to_string(ocr_image,
                                                        config="-c tessedit_char_whitelist=0123456789KM -psm 6")
@@ -303,7 +344,10 @@ class TowerOfHeroAssistant(Frame):
 
                 # Remove spaces
                 final_text = text.translate({ord(char): None for char in " "})
-                print(final_text)
+                seconds = time() - start_time
+                minutes, seconds = divmod(seconds, 60)
+                hours, minutes = divmod(minutes, 60)
+                print("Found %s (%s) after %d:%02d:%02d" % (stat, final_text, hours, minutes, seconds))
 
                 # Convert the character format to scientific
                 if stat == "Coins" or stat == "Summoned Heroes":
@@ -324,6 +368,7 @@ class TowerOfHeroAssistant(Frame):
 
                     So 100ab200aa would be 100 * 1096 + 200 * 1093 or 100.2 * 1096 (1.002E98 in scientific notation)
                     '''
+                    original_text = final_text
 
                     # Check if the format is less than or greater than 1 million
                     incremental_format_first_letters = findall(r"\d+([a-zA-Z]+)\d+[a-zA-Z]", final_text)
@@ -336,12 +381,10 @@ class TowerOfHeroAssistant(Frame):
 
                     # Format: __K__ (under one million)
                     if incremental_format_first_letters == "K":
-                        print(stat + ": Found it was under 1 million (e.g. 3K431)")
                         alphabetic_notation = int(findall(r"(\d+)[a-zA-Z]+\d+", final_text)[0]) * 1000 + int(findall(r"\d+[a-zA-Z]+(\d+)", final_text)[0])
                         final_text = "%.3E" % Decimal(str(alphabetic_notation))
                     # Format: __a__b (only one letter)
                     elif incremental_format_first_letters in MATH_NOTATION and incremental_format_second_letters in MATH_NOTATION:
-                        print(stat + ": Found single letter format (e.g. 100M50K or 50t310s)")
                         # formula = 10^(3*(x+1))
                         first_letter_multiplier = 10 ** (3 * (MATH_NOTATION.index(incremental_format_first_letters) + 1))
                         second_letter_multiplier = 10 ** (3 * (MATH_NOTATION.index(incremental_format_second_letters) + 1))
@@ -351,7 +394,6 @@ class TowerOfHeroAssistant(Frame):
                         final_text = "%.3E" % Decimal(str(alphabetic_notation))
                     # Format: __ab__aa (two letters)
                     elif len(incremental_format_first_letters) > 1 and len(incremental_format_second_letters) > 1:
-                        print(stat + ": Found double letter format (e.g. 5ab230aa)")
                         # formula = 10^(3 * (26*(x-3) + 5) + (3*(y-4)))
                         first_letter_multiplier = 10 ** (3 * ((26 * (MATH_NOTATION.index(incremental_format_first_letters[0]) - 3)) + 5)
                                                          + (3 * (MATH_NOTATION.index(incremental_format_first_letters[1]) - 4)))
@@ -366,6 +408,7 @@ class TowerOfHeroAssistant(Frame):
                     else:
                         messagebox.showerror("Calculation Failure",
                                              "Unable to calculate the scientific notation of " + stat + ". Using the alphabetic notation instead.")
+                    print("[%s] Changed %s to %s after %d:%02d:%02d" % (stat, original_text, final_text, hours, minutes, seconds))
 
                 # Add to the cumulative stats list (Cumulative Stat, Tier, Importance, Number, Item Acquisition Order)
                 item_acquisition_order += 1
@@ -384,7 +427,12 @@ class TowerOfHeroAssistant(Frame):
             messagebox.showerror("Image Recognition Failure",
                                  "Couldn't see Cumulative. Try lowering the match % for images.")
 
+        # Add the imported stats
+        # Note: Since each item is a column, we do the name and then a tuple of the stats
+        self.list_of_imports.append(self.import_name.get())
         self.list_of_imports.append((self.item_statistics, self.cumulative_statistics))
+
+        # Stop the progress bar
         self.progress_bar.stop()
         self.progress_bar.pack_forget()
         self.progress_window.withdraw()

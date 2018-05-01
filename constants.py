@@ -50,6 +50,7 @@ GAME_ITEMS = [
     ("Philosopher's Stone", IMG_PHILOSOPHERS_STONE, 3, 9),
     ("Rapier", IMG_RAPIER, 3, 6),
     ("Red Elixir", IMG_RED_ELIXIR, 4, 42),
+    ("Red Hand", IMG_RED_HAND, 3, 54),
     ("Solomon's Key", IMG_SOLOMONS_KEY, 4, 46),
     ("Solomon's Staff", IMG_SOLOMONS_STAFF, 4, 47),
     ("Summoning Letter", IMG_SUMMONING_LETTER, 5, 51),
