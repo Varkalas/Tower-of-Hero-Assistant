@@ -1,4 +1,3 @@
-# Imports
 from decimal import Decimal
 from os import system
 from math import floor
@@ -12,19 +11,18 @@ import numpy
 from PIL import Image, ImageTk
 import pytesseract
 
-from constants import GAME_ITEMS, CUMULATIVE_STATS, MATH_NOTATION
-from images import IMG_CUMULATIVE_STATS
+from core.constants import GAME_ITEMS, CUMULATIVE_STATS, MATH_NOTATION
+from core.images import *
+from definitions import ROOT_DIR
 
 
-# Consants
 _debug = False
 IMPORT_NAME = 0
 IMPORT_ITEM_STATISTICS = 0
 IMPORT_CUMULATIVE_STATISTICS = 0
 
 
-# Tower of Hero Assistant
-class TowerOfHeroAssistant(Frame):
+class TowerOfHeroGUI(Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -57,7 +55,7 @@ class TowerOfHeroAssistant(Frame):
         self.parent.title("Tower of Hero Assistant")
 
         # Icon
-        self.parent.iconbitmap(r"C:\Users\Varkalas D`Lonovan\PycharmProjects\Tower-of-Hero\img\toh_assistant_icon.ico")
+        self.parent.iconbitmap(ROOT_DIR + "\\images\\toh_assistant_icon.ico")
 
         # Window Size
         top = self.winfo_toplevel()
@@ -492,4 +490,4 @@ class TowerOfHeroAssistant(Frame):
 
 if __name__ == "__main__":
     root = Tk()
-    assistant = TowerOfHeroAssistant(root)
+    assistant = TowerOfHeroGUI(root)

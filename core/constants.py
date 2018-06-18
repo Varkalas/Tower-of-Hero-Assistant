@@ -1,4 +1,4 @@
-from images import *
+from core.images import *
 
 # Name, Image, Tier, Importance
 
@@ -10,6 +10,7 @@ GAME_ITEMS = [
     ("Awakening Sword", IMG_AWAKENING_SWORD, 2, 11),
     ("Awakening Sword +1", IMG_AWAKENING_SWORD_PLUS_1, 2, 10),
     ("Black Essence", IMG_BLACK_ESSENCE, "?", 50),
+    ("Blue Crystal", IMG_BLUE_CRYSTAL, "?", "?"),
     ("Blue Elixir", IMG_BLUE_ELIXIR, 4, 41),
     ("Caduceus", IMG_CADUCEUS, 3, 8),
     ("Claymore", IMG_CLAYMORE, 5, 15),
@@ -56,6 +57,7 @@ GAME_ITEMS = [
     ("Summoning Letter", IMG_SUMMONING_LETTER, 5, 51),
     ("Tomahawk", IMG_TOMAHAWK, 5, 13),
     ("Training Book", IMG_TRAINING_BOOK, 4, 48),
+    ("Veteran's Hat", IMG_VETERANS_HAT, "?", "?"),
     ("Wing Boots", IMG_WING_BOOTS, 3, 7)
 ]
 
